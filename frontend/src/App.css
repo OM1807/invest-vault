@@ -1,0 +1,96 @@
+.page-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #f5f5ff, #eef7ff);
+}
+
+.card {
+  width: min(100%, 1100px);
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.1);
+}
+
+.auth-card {
+  max-width: 480px;
+  text-align: center;
+}
+
+.toggle-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0 20px;
+}
+
+.toggle-row button,
+button {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: #e7ebf7;
+  color: #18212f;
+}
+
+.toggle-row button.active,
+button[type='submit'],
+.ghost-button {
+  background: #2563eb;
+  color: white;
+}
+
+.form-stack {
+  display: grid;
+  gap: 10px;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d8deea;
+  box-sizing: border-box;
+}
+
+textarea {
+  min-height: 90px;
+}
+
+.status {
+  margin-top: 12px;
+  color: #0f766e;
+}
+
+.dashboard-shell {
+  place-items: start center;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.panel-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin-bottom: 16px;
+}
+
+.panel {
+  padding: 18px;
+  border: 1px solid #e5eaf2;
+  border-radius: 16px;
+}
+
+.list-item {
+  border-top: 1px solid #eef2f7;
+  padding: 12px 0;
+}
