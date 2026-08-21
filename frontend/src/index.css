@@ -1,20 +1,38 @@
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  background: #f7f9fc;
-  color: #111827;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-ink-900 text-slate-200 font-sans antialiased;
+    min-height: 100vh;
+  }
+  ::selection {
+    @apply bg-accent-500/30 text-white;
+  }
 }
 
-#root {
-  min-height: 100vh;
+@layer components {
+  .glass-card {
+    @apply bg-ink-850 border border-white/10 rounded-xl;
+  }
+  .input-base {
+    @apply w-full rounded-lg bg-ink-800 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-accent-400;
+  }
 }
 
-input,
-textarea,
-button {
-  font: inherit;
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
-
-button {
-  cursor: pointer;
+::-webkit-scrollbar-track {
+  background: #0b0f19;
+}
+::-webkit-scrollbar-thumb {
+  background: #243049;
+  border-radius: 4px;
 }
