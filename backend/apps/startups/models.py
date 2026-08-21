@@ -19,7 +19,7 @@ class Startup(models.Model):
         related_name="startups",        
     )
     name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, blank=True)
+    slug = models.SlugField(max_length=255, blank=True, default="")
     tagline = models.CharField(max_length=255, blank=True)
     description = models.TextField()
     sector = models.CharField(max_length=120)
