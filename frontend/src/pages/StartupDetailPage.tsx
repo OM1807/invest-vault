@@ -21,6 +21,7 @@ import { bidsApi, foundersApi, roundsApi, startupsApi } from '@/lib/api';
 import type { BidPayload, FounderProfile, FundingRound, Startup } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { formatCurrency, formatPercent, formatDate } from '@/lib/format';
+import { chatApi } from '@/lib/api';
 
 export default function StartupDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -63,6 +64,12 @@ export default function StartupDetailPage() {
 
   const canBid = user?.role === 'investor';
   const openRounds = rounds.filter((r) => r.status === 'open');
+
+  const handleStartChat = async () => {
+    if (!startup) return;
+    const conv = await chatApi.startConversation({ startup: startup.id });
+    navigate(`/chat/${conv.id}`);
+  };
 
   if (loading) {
     return (
@@ -202,6 +209,11 @@ export default function StartupDetailPage() {
                         {r.status === 'open' && canBid && (
                           <Button size="sm" onClick={() => setBidModalRound(r)}>
                             Place a bid
+                          </Button>
+                        )}
+                        {user?.role === 'investor' && (
+                          <Button variant="ghost" className="w-full mt-3" onClick={handleStartChat}>
+                            Message founder
                           </Button>
                         )}
                       </div>

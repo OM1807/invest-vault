@@ -8,6 +8,8 @@ import InvestorDashboard from '@/pages/InvestorDashboard';
 import BrowseStartupsPage from '@/pages/BrowseStartupsPage';
 import StartupDetailPage from '@/pages/StartupDetailPage';
 import ProfilePage from '@/pages/ProfilePage';
+import ChatPage from './pages/ChatPage';
+
 
 function DashboardRouter() {
   const { user } = useAuth();
@@ -43,6 +45,8 @@ export default function App() {
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:conversationId" element={<ChatPage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

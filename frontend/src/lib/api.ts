@@ -15,6 +15,9 @@ import type {
   Startup,
   StartupPayload,
   User,
+  Conversation,
+  ConversationPayload,
+  Message,
 } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
@@ -199,4 +202,14 @@ export const bidsApi = {
   update: (id: number, payload: Partial<BidPayload>) =>
     api.patch<Bid>(`/investments/bids/${id}/`, payload).then((r) => r.data),
   remove: (id: number) => api.delete(`/investments/bids/${id}/`).then((r) => r.data),
+};
+
+// ---- Chat API ----
+export const chatApi = {
+  listConversations: () =>
+    api.get<Conversation[]>('/chat/conversations/').then((r) => r.data),
+  startConversation: (payload: ConversationPayload) =>
+    api.post<Conversation>('/chat/conversations/', payload).then((r) => r.data),
+  listMessages: (conversationId: number) =>
+    api.get<Message[]>('/chat/messages/', { params: { conversation: conversationId } }).then((r) => r.data),
 };

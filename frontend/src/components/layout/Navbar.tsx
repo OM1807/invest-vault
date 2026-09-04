@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
-
+import { MessageCircle } from lucide-react
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -92,6 +92,10 @@ export default function Navbar() {
               ))}
               <Link to="/profile" onClick={() => setOpen(false)} className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5">
                 Profile
+              </Link>
+              <Link to="/chat" className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5">
+                <MessageCircle className="h-4 w-4" />
+                Messages
               </Link>
               <button onClick={() => { setOpen(false); handleLogout(); }} className="block w-full text-left rounded-md px-3 py-2 text-sm text-rose-400 hover:bg-rose-500/10">
                 Sign out

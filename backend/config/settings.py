@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "apps.founders.apps.FoundersConfig",
     "apps.investors.apps.InvestorsConfig",
     "apps.investments.apps.InvestmentsConfig",
+    "apps.chat.apps.ChatConfig",
 ]
 
 MIDDLEWARE = [

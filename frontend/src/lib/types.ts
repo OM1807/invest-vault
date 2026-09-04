@@ -160,3 +160,30 @@ export interface BidPayload {
 
 // ---- API errors ----
 export type FieldErrors = Record<string, string[]>;
+
+// ---- Chat ----
+export interface Message {
+  id: number;
+  conversation: number;
+  sender: number;
+  sender_name: string;
+  text: string;
+  created_at: string;
+  is_read: boolean;
+}
+
+export interface Conversation {
+  id: number;
+  startup: number;
+  startup_name: string;
+  founder: number;
+  founder_name: string;
+  investor: number;
+  investor_name: string;
+  created_at: string;
+  last_message: Message | null;
+}
+
+export interface ConversationPayload {
+  startup: number;
+}
