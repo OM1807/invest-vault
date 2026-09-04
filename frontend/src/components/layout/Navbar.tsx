@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
-import { MessageCircle } from lucide-react
+import { MessageCircle } from 'lucide-react';
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
