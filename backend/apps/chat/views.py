@@ -1,5 +1,6 @@
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, status, viewsets
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
 
 from apps.users.models import UserRole
 from .models import Conversation, Message
@@ -17,10 +18,33 @@ class ConversationViewSet(viewsets.ModelViewSet):
             models_q(user)
         ).select_related("startup", "founder", "investor").order_by("-created_at")
 
-    def perform_create(self, serializer):
-        if self.request.user.role != UserRole.INVESTOR:
+    def create(self, request, *args, **kwargs):
+        if request.user.role != UserRole.INVESTOR:
             raise PermissionDenied("Only investors can start a conversation.")
-        serializer.save()
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        startup = serializer.validated_data["startup"]
+
+        # A conversation for this (startup, founder, investor) triple is
+        # unique in the DB. Re-opening a chat the investor already started
+        # (revisiting the page, double-clicking "Message founder", etc.)
+        # used to hit that constraint and crash with a 500 IntegrityError.
+        # get_or_create makes re-opening idempotent: return the existing
+        # conversation instead of trying to insert a duplicate row.
+        conversation, created = Conversation.objects.get_or_create(
+            startup=startup,
+            founder=startup.founder,
+            investor=request.user,
+        )
+
+        output_serializer = self.get_serializer(conversation)
+        headers = self.get_success_headers(output_serializer.data)
+        return Response(
+            output_serializer.data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+            headers=headers,
+        )
 
 
 def models_q(user):

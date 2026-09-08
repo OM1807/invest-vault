@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import { MessageCircle } from 'lucide-react';
+
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -49,6 +50,15 @@ export default function Navbar() {
                     {item.label}
                   </Link>
                 ))}
+                <Link
+                  to="/chat"
+                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors ${
+                    location.pathname.startsWith('/chat') ? 'text-white bg-white/5' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Messages
+                </Link>
               </nav>
             )}
           </div>

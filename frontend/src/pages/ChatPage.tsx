@@ -10,6 +10,10 @@ import type { Conversation, Message } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { formatDate } from '@/lib/format';
 
+type SocketStatus = 'connecting' | 'open' | 'closed';
+
+const RECONNECT_DELAY_MS = 2000;
+
 export default function ChatPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const { user } = useAuth();
@@ -17,9 +21,14 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [socketStatus, setSocketStatus] = useState<SocketStatus>('connecting');
   const [text, setText] = useState('');
+
   const wsRef = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unmountingRef = useRef(false);
 
   const activeId = conversationId ? Number(conversationId) : null;
 
@@ -28,22 +37,49 @@ export default function ChatPage() {
   }, []);
 
   const loadMessages = useCallback(async (id: number) => {
-    const msgs = await chatApi.listMessages(id);
-    setMessages(msgs);
+    setMessagesLoading(true);
+    try {
+      const msgs = await chatApi.listMessages(id);
+      setMessages(msgs);
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, []);
+
+  // Bumps a conversation's preview text and re-sorts the sidebar, the way
+  // a real chat app (WhatsApp, Slack, etc.) keeps the most recently active
+  // thread on top.
+  const touchConversationPreview = useCallback((conversationIdForMsg: number, message: Message) => {
+    setConversations((prev) => {
+      const next = prev.map((c) =>
+        c.id === conversationIdForMsg ? { ...c, last_message: message } : c
+      );
+      next.sort((a, b) => {
+        const at = a.last_message?.created_at ?? a.created_at;
+        const bt = b.last_message?.created_at ?? b.created_at;
+        return new Date(bt).getTime() - new Date(at).getTime();
+      });
+      return next;
+    });
   }, []);
 
   useEffect(() => {
     if (!activeId) return;
+
+    unmountingRef.current = false;
+    setMessages([]); // don't show the previous conversation's messages while switching
     loadMessages(activeId);
 
-    const ws = connectChatSocket(activeId);
-    wsRef.current = ws;
+    const openSocket = () => {
+      setSocketStatus('connecting');
+      const ws = connectChatSocket(activeId);
+      wsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setMessages((prev) => [
-        ...prev,
-        {
+      ws.onopen = () => setSocketStatus('open');
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        const incoming: Message = {
           id: data.id,
           conversation: activeId,
           sender: data.sender,
@@ -51,12 +87,33 @@ export default function ChatPage() {
           text: data.text,
           created_at: data.created_at,
           is_read: false,
-        },
-      ]);
+        };
+        // Guard against duplicate delivery on reconnect.
+        setMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
+        touchConversationPreview(activeId, incoming);
+      };
+
+      ws.onclose = () => {
+        setSocketStatus('closed');
+        if (!unmountingRef.current) {
+          reconnectTimerRef.current = setTimeout(openSocket, RECONNECT_DELAY_MS);
+        }
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
     };
 
-    return () => ws.close();
-  }, [activeId, loadMessages]);
+    openSocket();
+
+    return () => {
+      unmountingRef.current = true;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      wsRef.current?.close();
+      wsRef.current = null;
+    };
+  }, [activeId, loadMessages, touchConversationPreview]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -64,9 +121,11 @@ export default function ChatPage() {
 
   const sendMessage = () => {
     if (!text.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    wsRef.current.send(JSON.stringify({ text }));
+    wsRef.current.send(JSON.stringify({ text: text.trim() }));
     setText('');
   };
+
+  const isConnected = socketStatus === 'open';
 
   return (
     <div className="min-h-screen bg-ink-900">
@@ -94,6 +153,12 @@ export default function ChatPage() {
                   <div className="text-xs text-slate-500 truncate">
                     {user?.role === 'founder' ? c.investor_name : c.founder_name}
                   </div>
+                  {c.last_message && (
+                    <div className="text-xs text-slate-500 truncate mt-0.5">
+                      {c.last_message.sender === user?.id ? 'You: ' : ''}
+                      {c.last_message.text}
+                    </div>
+                  )}
                 </Link>
               ))}
             </div>
@@ -105,33 +170,52 @@ export default function ChatPage() {
             <EmptyState icon={MessageCircle} title="Select a conversation" description="Pick a conversation from the list to start chatting." />
           ) : (
             <>
-              <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-                {messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`max-w-[75%] rounded-xl px-3 py-2 text-sm ${
-                      m.sender === user?.id
-                        ? 'ml-auto bg-accent-500 text-white'
-                        : 'bg-ink-800/60 text-slate-200'
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      isConnected ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
                     }`}
-                  >
-                    <div>{m.text}</div>
-                    <div className="text-[10px] opacity-60 mt-1">{formatDate(m.created_at)}</div>
-                  </div>
-                ))}
+                  />
+                  {isConnected ? 'Connected' : socketStatus === 'connecting' ? 'Connecting…' : 'Reconnecting…'}
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                {messagesLoading ? (
+                  <Spinner />
+                ) : messages.length === 0 ? (
+                  <EmptyState icon={MessageCircle} title="No messages yet" description="Say hello to get the conversation started." />
+                ) : (
+                  messages.map((m) => (
+                    <div
+                      key={m.id}
+                      className={`max-w-[75%] rounded-xl px-3 py-2 text-sm ${
+                        m.sender === user?.id
+                          ? 'ml-auto bg-accent-500 text-white'
+                          : 'bg-ink-800/60 text-slate-200'
+                      }`}
+                    >
+                      <div>{m.text}</div>
+                      <div className="text-[10px] opacity-60 mt-1">{formatDate(m.created_at)}</div>
+                    </div>
+                  ))
+                )}
                 <div ref={bottomRef} />
               </div>
               <div className="flex items-center gap-2 mt-4">
                 <input
-                  className="input-base flex-1"
-                  placeholder="Type a message..."
+                  className="input-base flex-1 disabled:opacity-50"
+                  placeholder={isConnected ? 'Type a message...' : 'Reconnecting to chat...'}
                   value={text}
+                  disabled={!isConnected}
                   onChange={(e) => setText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                 />
                 <button
                   onClick={sendMessage}
-                  className="rounded-lg bg-accent-500 p-2.5 text-white hover:bg-accent-600 transition-colors"
+                  disabled={!isConnected || !text.trim()}
+                  className="rounded-lg bg-accent-500 p-2.5 text-white hover:bg-accent-600 transition-colors disabled:opacity-50 disabled:hover:bg-accent-500"
                 >
                   <Send className="h-4 w-4" />
                 </button>
